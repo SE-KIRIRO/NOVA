@@ -5,6 +5,7 @@ from .forms import NameForm
 from ..models import User, Role
 from ..email import send_email
 from .. import db
+from flask_login import current_user
 
 
 @main.route("/", methods=["GET", "POST"])
@@ -24,6 +25,7 @@ def index():
             session["known"] = True
         session["name"] = form.name.data
         form.name.data = ""
+        return redirect(url_for("main.index"))
     return render_template("index.html",
                            current_time=datetime.utcnow(), name= session.get("name"),
                            form=form , known=session.get("known", False))
