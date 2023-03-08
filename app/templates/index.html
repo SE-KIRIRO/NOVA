@@ -5,6 +5,14 @@
 
 {% block page_content %}
 <div class="page-header">
-    <h1>Hello, world!</h1>
+    <h1>Hello, {{ current_user.username }}!</h1>
+    <div>
+        {% if current_user.can(Permission.WRITE) %}
+            {{ wtf.quick_form(form)}}
+        {% endif %}
+    </div>
+    <div>
+        {% include '_posts.html' %}
+    </div>
 </div>
 {% endblock %}

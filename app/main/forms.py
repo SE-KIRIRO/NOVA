@@ -45,5 +45,6 @@ class EditProfileAdminForm(FlaskForm):
         if field.data != self.user.username and User.query.filter_by(username=field.data).first():
             raise ValidationError("The username is already in use")
 
-
-
+class PostForm(FlaskForm):
+    body = TextAreaField("what is on your mind", validators=[DataRequired()])
+    submit = SubmitField("submit")
