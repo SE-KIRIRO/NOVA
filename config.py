@@ -13,7 +13,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     NOVA_POSTS_PER_PAGE = int(os.environ.get("NOVA_POSTS_PER_PAGE"))
     NOVA_FOLLOWERS_PER_PAGE=int(os.environ.get("NOVA_FOLLOWERS_PER_PAGE"))
-   
+    NOVA_COMMENTS_PER_PAGE=int(os.environ.get("NOVA_COMMENTS_PER_PAGE"))
     @staticmethod
     def init_app(app):
         pass

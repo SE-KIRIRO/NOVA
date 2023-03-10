@@ -1,8 +1,8 @@
 from . import main
 from flask import render_template, session, abort, make_response, request, redirect, url_for, flash, current_app
 from datetime import datetime
-from .forms import NameForm, PostForm, EditProfileForm, EditProfileAdminForm
-from ..models import User, Role, Permission, Post
+from .forms import NameForm, PostForm, EditProfileForm, CommentForm, EditProfileAdminForm
+from ..models import User, Role, Permission, Post, Comment
 from ..email import send_email
 from .. import db
 from flask_login import current_user, login_required
@@ -104,10 +104,28 @@ def edit_profile_admin(id):
     return render_template('edit_profile.html', form=form, user=user)
 
 
-@main.route('/post<int:id>')
+@main.route('/post/<int:id>', methods=['GET', 'POST'])
 def post(id):
     post = Post.query.get_or_404(id)
-    return render_template("post.html", posts=[post])
+    form = CommentForm()
+    if form.validate_on_submit():
+        comment = Comment(body=form.body.data,
+                          post=post,
+                          author=current_user._get_current_object())
+        db.session.add(comment)
+        db.session.commit()
+        flash('Your comment has been published.')
+        return redirect(url_for('.post', id=post.id, page=-1))
+    page = request.args.get('page', 1, type=int)
+    if page == -1:
+        page = (post.comments.count() - 1) // \
+            current_app.config['NOVA_COMMENTS_PER_PAGE'] + 1
+    pagination = post.comments.order_by(Comment.timestamp.asc()).paginate(
+        page=page, per_page=current_app.config['NOVA_COMMENTS_PER_PAGE'],
+        error_out=False)
+    comments = pagination.items
+    return render_template('post.html', posts=[post], form=form,
+                           comments=comments, pagination=pagination)
 
 @main.route("/edit<int:id>", methods=['GET', 'POST'])
 @login_required
@@ -197,8 +215,38 @@ def followed_by(username):
 def for_admins_only():
     return "for administrators"
 
-@main.route("/moderate")
+@main.route('/moderate')
 @login_required
 @permission_required(Permission.MODERATE)
-def for_moderators_only():
-    return "for comment moderators"
+def moderate():
+    page = request.args.get('page', 1, type=int)
+    pagination = Comment.query.order_by(Comment.timestamp.desc()).paginate(
+        page=page, per_page=current_app.config['NOVA_COMMENTS_PER_PAGE'],
+        error_out=False)
+    comments = pagination.items
+    return render_template('moderate.html', comments=comments,
+                           pagination=pagination, page=page)
+
+@main.route('/moderate/enable/<int:id>')
+@login_required
+@permission_required(Permission.MODERATE)
+def moderate_enable(id):
+    comment = Comment.query.get_or_404(id)
+    comment.disabled = False
+    db.session.add(comment)
+    db.session.commit()
+    return redirect(url_for('.moderate',
+                            page=request.args.get('page', 1, type=int)))
+
+@main.route('/moderate/disable/<int:id>')
+@login_required
+@permission_required(Permission.MODERATE)
+def moderate_disable(id):
+    comment = Comment.query.get_or_404(id)
+    comment.disabled = True
+    db.session.add(comment)
+    db.session.commit()
+    return redirect(url_for('.moderate',
+                            page=request.args.get('page', 1, type=int)))
+                                                                          
+
